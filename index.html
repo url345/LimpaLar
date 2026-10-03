@@ -115,6 +115,8 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 .stk{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;align-items:center;justify-content:space-between;gap:12px;background:#0d3d7a;color:#fff;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px rgba(0,0,0,.2)}
 .stk .btn{min-height:48px;padding:0 20px;font-size:.95rem}.stk b{font-size:1.2rem;color:#ffd23f;margin-right:6px}
 @media(max-width:800px){.stk{display:flex}footer{padding-bottom:90px}}
+@keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@media(prefers-reduced-motion:reduce){#buy2{animation:none!important}}
 </style>
 <!-- RASTREAMENTO: cole aqui os scripts do Meta Pixel e do Google Analytics quando tiver os IDs reais.
      Exemplo: Meta Pixel -> fbq('init','SEU_PIXEL_ID');  GA4 -> gtag('config','SEU_GA_ID'); -->
@@ -195,6 +197,8 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
   <p style="font-size:1.15rem">Menos que um lanche. Preencha, pague e pronto: sem enrolação, sem cadastro complicado.</p>
   <div class="preco">R$ 15,50</div>
   <a class="btn amar full" href="#checkout" style="max-width:460px;min-height:64px;font-size:1.2rem">QUERO O MEU AGORA</a>
+  <p style="margin:18px 0 10px;font-weight:800;font-size:1.2rem">OU COMPRE 2 POR R$ 29,90</p>
+  <a class="btn full" id="buy2" href="#checkout" style="max-width:460px;min-height:60px;background:#ff4d2e;color:#fff;font-size:1.1rem;box-shadow:0 8px 22px rgba(255,77,46,.45);animation:pulsa 1.8s ease-in-out infinite">COMPRE 2 E ECONOMIZE R$ 1,10</a>
   <p style="margin-top:16px;opacity:.9">Frete mostrado antes de finalizar. Sem surpresas.</p>
  </div>
 </section>
@@ -231,6 +235,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
      <div class="lin"><span>Percarbonato de Sódio Limpalar</span><span>R$ 15,50</span></div>
      <div class="lin"><span>Quantidade</span>
       <span class="qtd"><button type="button" id="menos" aria-label="Diminuir">−</button><output id="qtd" aria-live="polite">1</output><button type="button" id="mais" aria-label="Aumentar">+</button></span></div>
+     <div class="lin"><span>Leve 2 por R$ 29,90</span><span>economize R$ 1,10</span></div>
      <div class="lin"><span>Valor</span><span id="sub">R$ 15,50</span></div>
      <div class="lin"><span>Frete</span><span>Calculado conforme o CEP, mostrado antes de finalizar</span></div>
      <div class="lin tot"><span>Total</span><span id="total">R$ 15,50 + frete</span></div>
@@ -263,7 +268,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 <footer id="contato">
  <div class="wrap">
   <strong style="color:#fff;font-size:1.2rem">LIMPALAR</strong>
-  <p>E-mail de atendimento: [COLOCAR E-MAIL REAL]<br>WhatsApp: [COLOCAR WHATSAPP REAL]</p>
+  <p>E-mail de atendimento: <a href="mailto:limpalaar@gmail.com">limpalaar@gmail.com</a></p>
   <ul>
    <li><a href="#">Política de Privacidade</a></li><li><a href="#">Termos de Uso</a></li>
    <li><a href="#">Política de Troca e Devolução</a></li><li><a href="#">Política de Entrega</a></li><li><a href="#contato">Contato</a></li>
@@ -290,6 +295,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 /* ============ CONFIGURAÇÃO (edite aqui ao conectar serviços reais) ============ */
 const CONFIG = {
   preco: 15.50,
+  preco2: 29.90,   // preço de cada 2 unidades (Compre 2)
   // Pagamento: só habilite o que realmente estiver integrado a um gateway.
   pagamento: {
     pix:     { ativo: false, qrCodeUrl: "", copiaECola: "" }, // preencher com dados do gateway
@@ -324,8 +330,9 @@ $('menu').addEventListener('click', e => { if(e.target.tagName==='A'){ $('menu')
   .forEach(s => $('uf').add(new Option(s,s)));
 
 /* quantidade */
+const total = n => Math.floor(n/2)*CONFIG.preco2 + (n%2)*CONFIG.preco;
 let q = 1;
-function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(q*CONFIG.preco); $('total').textContent=brl(q*CONFIG.preco)+' + frete'; }
+function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(total(q)); $('total').textContent=brl(total(q))+' + frete'; }
 $('mais').onclick = () => { if(q<20){q++;atualiza();} };
 $('menos').onclick = () => { if(q>1){q--;atualiza();} };
 
@@ -360,7 +367,7 @@ if(n.length)$('faqPag').textContent='Disponíveis nesta loja: '+n.join(', ')+'.'
 /* eventos de funil */
 let vistoProd=false, iniciou=false;
 new IntersectionObserver((en,ob)=>{ if(en[0].isIntersecting&&!vistoProd){vistoProd=true;track('ViewContent',{content_name:'Percarbonato de Sódio',value:CONFIG.preco,currency:'BRL'});} },{threshold:.4}).observe($('produto'));
-$('form').addEventListener('focusin', () => { if(!iniciou){iniciou=true;track('InitiateCheckout',{value:q*CONFIG.preco,currency:'BRL',num_items:q});} });
+$('form').addEventListener('focusin', () => { if(!iniciou){iniciou=true;track('InitiateCheckout',{value:total(q),currency:'BRL',num_items:q});} });
 
 /* validação + envio */
 const obrig=['nome','email','tel','cep','uf','cidade','bairro','end','num'];
@@ -374,7 +381,7 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const oks=obrig.map(valido); if(oks.includes(false)){ $(obrig[oks.indexOf(false)]).focus(); return; }
   const pedido={ numero:'PED-'+Date.now().toString(36).toUpperCase(), produto:'Percarbonato de Sódio Limpalar', quantidade:q,
-    valor:q*CONFIG.preco, pagamento:metodo, aceitaNovidades:$('news').checked,
+    valor:total(q), pagamento:metodo, aceitaNovidades:$('news').checked,
     cliente:{nome:$('nome').value.trim(),email:$('email').value.trim(),telefone:$('tel').value},
     endereco:{cep:$('cep').value,uf:$('uf').value,cidade:$('cidade').value,bairro:$('bairro').value,rua:$('end').value,numero:$('num').value,complemento:$('comp').value} };
   const btn=$('finalizar'); btn.disabled=true; btn.textContent='Enviando…';
@@ -403,6 +410,7 @@ function mostraSucesso(p,backend){
   $('loja').style.display='none'; $('sucesso').style.display='block'; scrollTo(0,0);
 }
 $('voltar').onclick = () => { $('sucesso').style.display='none'; $('loja').style.display='block'; $('finalizar').disabled=false; $('finalizar').textContent='FINALIZAR PEDIDO'; scrollTo(0,0); };
+$('buy2').onclick=()=>{q=2;atualiza();};
 atualiza();
 new IntersectionObserver(e=>{$('stk').style.visibility=e[0].isIntersecting?'hidden':'visible'},{threshold:.1}).observe($('checkout'));
 </script>
