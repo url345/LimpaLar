@@ -199,7 +199,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
   <a class="btn amar full" href="#checkout" style="max-width:460px;min-height:64px;font-size:1.2rem">QUERO O MEU AGORA</a>
   <p style="margin:18px 0 10px;font-weight:800;font-size:1.2rem">OU COMPRE 2 POR R$ 29,90</p>
   <a class="btn full" id="buy2" href="#checkout" style="max-width:460px;min-height:60px;background:#ff4d2e;color:#fff;font-size:1.1rem;box-shadow:0 8px 22px rgba(255,77,46,.45);animation:pulsa 1.8s ease-in-out infinite">COMPRE 2 E ECONOMIZE R$ 1,10</a>
-  <p style="margin-top:16px;opacity:.9">Frete mostrado antes de finalizar. Sem surpresas.</p>
+  <p style="margin-top:16px;opacity:.9">Frete fixo de R$ 7,80 para todos os estados. Sem surpresas.</p>
  </div>
 </section>
 
@@ -237,7 +237,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
       <span class="qtd"><button type="button" id="menos" aria-label="Diminuir">−</button><output id="qtd" aria-live="polite">1</output><button type="button" id="mais" aria-label="Aumentar">+</button></span></div>
      <div class="lin"><span>Leve 2 por R$ 29,90</span><span>economize R$ 1,10</span></div>
      <div class="lin"><span>Valor</span><span id="sub">R$ 15,50</span></div>
-     <div class="lin"><span>Frete</span><span>Calculado conforme o CEP, mostrado antes de finalizar</span></div>
+     <div class="lin"><span>Frete (todos os estados)</span><span>R$ 7,80</span></div>
      <div class="lin tot"><span>Total</span><span id="total">R$ 15,50 + frete</span></div>
     </div>
 
@@ -295,10 +295,11 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 /* ============ CONFIGURAÇÃO (edite aqui ao conectar serviços reais) ============ */
 const CONFIG = {
   preco: 15.50,
+  frete: 7.80,      // frete fixo para todos os estados
   preco2: 29.90,   // preço de cada 2 unidades (Compre 2)
   // Pagamento: só habilite o que realmente estiver integrado a um gateway.
   pagamento: {
-    pix:     { ativo: false, qrCodeUrl: "", copiaECola: "" }, // preencher com dados do gateway
+    pix:     { ativo: true, qrCodeUrl: "", copiaECola: "" }, // preencher com dados do gateway
     credito: { ativo: false },
     debito:  { ativo: false }
   },
@@ -332,7 +333,7 @@ $('menu').addEventListener('click', e => { if(e.target.tagName==='A'){ $('menu')
 /* quantidade */
 const total = n => Math.floor(n/2)*CONFIG.preco2 + (n%2)*CONFIG.preco;
 let q = 1;
-function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(total(q)); $('total').textContent=brl(total(q))+' + frete'; }
+function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(total(q)); $('total').textContent=brl(total(q)+CONFIG.frete); }
 $('mais').onclick = () => { if(q<20){q++;atualiza();} };
 $('menos').onclick = () => { if(q>1){q--;atualiza();} };
 
@@ -361,6 +362,7 @@ function montaPagamento(){
   const c=$('copiar'); if(c) c.onclick=()=>{ if(!p.pix.copiaECola) return; navigator.clipboard.writeText(p.pix.copiaECola).then(()=>c.textContent='CÓDIGO COPIADO'); };
 }
 montaPagamento();
+{const c=$('copiar');if(c)c.remove();const k=$('pixCod');if(k)k.textContent='Seu QR Code e o código PIX aparecem logo após finalizar o pedido.';}
 (function(){const p=CONFIG.pagamento,n=[];if(p.pix.ativo)n.push('PIX');if(p.credito.ativo)n.push('cartão de crédito');if(p.debito.ativo)n.push('cartão de débito');
 if(n.length)$('faqPag').textContent='Disponíveis nesta loja: '+n.join(', ')+'.';})();
 
@@ -381,16 +383,23 @@ $('form').addEventListener('submit', async e => {
   e.preventDefault();
   const oks=obrig.map(valido); if(oks.includes(false)){ $(obrig[oks.indexOf(false)]).focus(); return; }
   const pedido={ numero:'PED-'+Date.now().toString(36).toUpperCase(), produto:'Percarbonato de Sódio Limpalar', quantidade:q,
-    valor:total(q), pagamento:metodo, aceitaNovidades:$('news').checked,
+    valor:total(q)+CONFIG.frete, pagamento:metodo, aceitaNovidades:$('news').checked,
     cliente:{nome:$('nome').value.trim(),email:$('email').value.trim(),telefone:$('tel').value},
     endereco:{cep:$('cep').value,uf:$('uf').value,cidade:$('cidade').value,bairro:$('bairro').value,rua:$('end').value,numero:$('num').value,complemento:$('comp').value} };
   const btn=$('finalizar'); btn.disabled=true; btn.textContent='Enviando…';
   let backend=false;
+  if(metodo==='pix'){
+    try{
+      const r=await fetch('/api/charge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({numero:pedido.numero,quantidade:q,nome:pedido.cliente.nome,email:pedido.cliente.email,telefone:pedido.cliente.telefone})});
+      const d=await r.json(); if(!r.ok||!d.ok) throw new Error('falha');
+      pedido.cobranca=d.charge; backend=true;
+    }catch(_){ btn.disabled=false; btn.textContent='FINALIZAR PEDIDO'; alert('Não foi possível gerar o PIX agora. Tente novamente em instantes.'); return; }
+  }
   if(CONFIG.pedidoEndpoint){
     try{ const r=await fetch(CONFIG.pedidoEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(pedido)}); backend=r.ok; }catch(_){}
     if(!backend){ btn.disabled=false; btn.textContent='FINALIZAR PEDIDO'; alert('Não foi possível enviar o pedido. Tente novamente.'); return; }
   }
-  if(backend) track('Purchase',{value:pedido.valor,currency:'BRL',num_items:q});
+  if(backend&&metodo!=='pix') track('Purchase',{value:pedido.valor,currency:'BRL',num_items:q});
   mostraSucesso(pedido,backend);
 });
 
@@ -400,14 +409,27 @@ function mostraSucesso(p,backend){
   $('resumo').innerHTML = `<div class="lin"><span>Número do pedido</span><strong>${p.numero}</strong></div>
    <div class="lin"><span>Produto</span><span>${p.produto}</span></div>
    <div class="lin"><span>Quantidade</span><span>${p.quantidade}</span></div>
-   <div class="lin"><span>Valor</span><span>${brl(p.valor)} + frete</span></div>
+   <div class="lin"><span>Valor</span><span>${brl(p.valor)} (frete incluso)</span></div>
    <div class="lin"><span>Pagamento</span><span>${{pix:'PIX',credito:'Cartão de crédito',debito:'Cartão de débito'}[p.pagamento]||'Não configurado'}</span></div>
    <div class="lin" style="border:0"><span>Entrega</span><span style="text-align:right">${p.endereco.rua}, ${p.endereco.numero}${p.endereco.complemento?' – '+p.endereco.complemento:''}<br>${p.endereco.bairro}, ${p.endereco.cidade}/${p.endereco.uf} – ${p.endereco.cep}</span></div>`;
   $('stAviso').textContent = backend
     ? (pendente ? 'Aguardando confirmação do pagamento. Siga as instruções de pagamento e aguarde a confirmação. Enviaremos as informações do pedido para o e-mail informado.' : 'Enviaremos as informações do pedido para o e-mail informado.')
     : 'Modo de demonstração: o pedido não foi gravado e nenhum e-mail foi enviado. Conecte um backend em CONFIG.pedidoEndpoint.';
   const a=$('acomp'); a.href = CONFIG.urlAcompanhar||'#'; a.style.display = CONFIG.urlAcompanhar?'':'none';
+  mostraPix(p);
   $('loja').style.display='none'; $('sucesso').style.display='block'; scrollTo(0,0);
+}
+function textos(o,out=[]){ if(o&&typeof o==='object'){for(const k in o)textos(o[k],out);} else if(typeof o==='string') out.push(o); return out; }
+function mostraPix(p){
+  let a=$('pixArea'); if(!a){a=document.createElement('div');a.id='pixArea';$('resumo').after(a);} a.innerHTML='';
+  if(!p.cobranca) return;
+  const t=textos(p.cobranca), code=t.find(s=>s.startsWith('000201')), img=t.find(s=>/^data:image/.test(s)||/^https?:\/\/\S+\.(png|jpe?g|svg)/i.test(s)||/^[A-Za-z0-9+\/=]{300,}$/.test(s));
+  a.className='card'; a.style.cssText='max-width:520px;margin:0 auto 24px;text-align:center';
+  a.innerHTML='<h3>Pagamento via PIX</h3><div id="pixQr" style="display:grid;place-items:center;margin:12px 0"></div>'+(code?'<label>Código PIX copia e cola</label><code style="display:block;word-break:break-all;background:var(--azul-cl);padding:10px;border-radius:10px;font-size:.85rem;margin:8px 0;text-align:left">'+code+'</code><button class="btn full" type="button" id="cpx">COPIAR CÓDIGO PIX</button>':'<p>Cobrança criada. Siga as instruções de pagamento enviadas pela NovaPay.</p>')+'<p class="mini">Após realizar o pagamento, aguarde a confirmação.</p>';
+  const box=$('pixQr');
+  if(img){const i=new Image();i.alt='QR Code PIX';i.width=200;i.height=200;i.src=/^(data:|https?:)/.test(img)?img:'data:image/png;base64,'+img;box.appendChild(i);}
+  else if(code){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=()=>new QRCode(box,{text:code,width:200,height:200});document.head.appendChild(s);}
+  const c=$('cpx'); if(c) c.onclick=()=>navigator.clipboard.writeText(code).then(()=>c.textContent='CÓDIGO COPIADO');
 }
 $('voltar').onclick = () => { $('sucesso').style.display='none'; $('loja').style.display='block'; $('finalizar').disabled=false; $('finalizar').textContent='FINALIZAR PEDIDO'; scrollTo(0,0); };
 $('buy2').onclick=()=>{q=2;atualiza();};
