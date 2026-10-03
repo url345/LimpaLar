@@ -359,7 +359,7 @@ function montaPagamento(){
     <label for="pixCod">Código PIX copia e cola</label><code id="pixCod">${p.pix.copiaECola||'Gerado após o gateway ser conectado'}</code>
     <button type="button" class="btn sec full" id="copiar">COPIAR CÓDIGO PIX</button></div>`:''}</div>`).join('');
   box.addEventListener('change', e => { if(e.target.name==='pg') metodo=e.target.value; });
-  const c=$('copiar'); if(c) c.onclick=()=>{ if(!p.pix.copiaECola) return; navigator.clipboard.writeText(p.pix.copiaECola).then(()=>c.textContent='CÓDIGO COPIADO'); };
+  const c=$('copiar'); if(c) c.onclick=()=>{ if(!p.pix.copiaECola) return; navigator.clipboard.writeText(p.pix.copiaECola).then(()=>c.textContent='COPIADO!'); };
 }
 montaPagamento();
 {const c=$('copiar');if(c)c.remove();const k=$('pixCod');if(k)k.textContent='Seu QR Code e o código PIX aparecem logo após finalizar o pedido.';}
@@ -425,7 +425,7 @@ function mostraPix(p){
   if(!p.cobranca) return;
   const t=textos(p.cobranca), code=t.find(s=>s.startsWith('000201')), img=t.find(s=>/^data:image/.test(s)||/^https?:\/\/\S+\.(png|jpe?g|svg)/i.test(s)||/^[A-Za-z0-9+\/=]{300,}$/.test(s));
   a.className='card'; a.style.cssText='max-width:520px;margin:0 auto 24px;text-align:center';
-  a.innerHTML='<h3>Pagamento via PIX</h3><div id="pixQr" style="display:grid;place-items:center;margin:12px 0"></div>'+(code?'<label>Código PIX copia e cola</label><code style="display:block;word-break:break-all;background:var(--azul-cl);padding:10px;border-radius:10px;font-size:.85rem;margin:8px 0;text-align:left">'+code+'</code><button class="btn full" type="button" id="cpx">COPIAR CÓDIGO PIX</button>':'<p>Cobrança criada. Siga as instruções de pagamento enviadas pela NovaPay.</p>')+'<p class="mini">Após realizar o pagamento, aguarde a confirmação.</p>';
+  a.innerHTML='<h3>Pagamento via PIX</h3><div id="pixQr" style="display:grid;place-items:center;margin:12px 0"></div>'+(code?'<label>Código PIX copia e cola</label><div style="display:flex;gap:8px;align-items:center;margin:8px 0"><code style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--azul-cl);padding:14px 12px;border-radius:10px;font-size:.85rem;text-align:left">'+code+'</code><button class="btn" type="button" id="cpx" style="min-height:48px;padding:0 18px;white-space:nowrap">COPIAR</button></div>':'<p>Cobrança criada. Siga as instruções de pagamento enviadas pela NovaPay.</p>')+'<p class="mini">Após realizar o pagamento, aguarde a confirmação.</p>';
   const box=$('pixQr');
   if(img){const i=new Image();i.alt='QR Code PIX';i.width=200;i.height=200;i.src=/^(data:|https?:)/.test(img)?img:'data:image/png;base64,'+img;box.appendChild(i);}
   else if(code){const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';s.onload=()=>new QRCode(box,{text:code,width:200,height:200});document.head.appendChild(s);}
