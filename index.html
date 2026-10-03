@@ -117,6 +117,9 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 @media(max-width:800px){.stk{display:flex}footer{padding-bottom:90px}}
 @keyframes pulsa{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
 @media(prefers-reduced-motion:reduce){#buy2{animation:none!important}}
+#freteVal.calc{color:var(--azul);font-weight:600;animation:pisca 1s ease-in-out infinite}
+@keyframes pisca{50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){#freteVal.calc{animation:none}}
 </style>
 <!-- RASTREAMENTO: cole aqui os scripts do Meta Pixel e do Google Analytics quando tiver os IDs reais.
      Exemplo: Meta Pixel -> fbq('init','SEU_PIXEL_ID');  GA4 -> gtag('config','SEU_GA_ID'); -->
@@ -237,7 +240,7 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
       <span class="qtd"><button type="button" id="menos" aria-label="Diminuir">−</button><output id="qtd" aria-live="polite">1</output><button type="button" id="mais" aria-label="Aumentar">+</button></span></div>
      <div class="lin"><span>Leve 2 por R$ 29,90</span><span>economize R$ 1,10</span></div>
      <div class="lin"><span>Valor</span><span id="sub">R$ 15,50</span></div>
-     <div class="lin"><span>Frete (todos os estados)</span><span>R$ 7,80</span></div>
+     <div class="lin"><span>Frete</span><span id="freteVal">Informe o CEP</span></div>
      <div class="lin tot"><span>Total</span><span id="total">R$ 15,50 + frete</span></div>
     </div>
 
@@ -331,9 +334,10 @@ $('menu').addEventListener('click', e => { if(e.target.tagName==='A'){ $('menu')
   .forEach(s => $('uf').add(new Option(s,s)));
 
 /* quantidade */
+let freteOk=false, freteT;
 const total = n => Math.floor(n/2)*CONFIG.preco2 + (n%2)*CONFIG.preco;
 let q = 1;
-function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(total(q)); $('total').textContent=brl(total(q)+CONFIG.frete); }
+function atualiza(){ $('qtd').textContent=q; $('sub').textContent=brl(total(q)); $('total').textContent=freteOk?brl(total(q)+CONFIG.frete):brl(total(q))+' + frete'; }
 $('mais').onclick = () => { if(q<20){q++;atualiza();} };
 $('menos').onclick = () => { if(q>1){q--;atualiza();} };
 
@@ -433,6 +437,12 @@ function mostraPix(p){
 }
 $('voltar').onclick = () => { $('sucesso').style.display='none'; $('loja').style.display='block'; $('finalizar').disabled=false; $('finalizar').textContent='FINALIZAR PEDIDO'; scrollTo(0,0); };
 $('buy2').onclick=()=>{q=2;atualiza();};
+$('cep').addEventListener('input',()=>{
+  clearTimeout(freteT); const ok=$('cep').value.replace(/\D/g,'').length===8, v=$('freteVal');
+  if(!ok){freteOk=false;v.classList.remove('calc');v.textContent='Informe o CEP';atualiza();return;}
+  freteOk=false;atualiza();v.classList.add('calc');v.textContent='🚚 Calculando rota de entrega…';
+  freteT=setTimeout(()=>{freteOk=true;v.classList.remove('calc');v.textContent=brl(CONFIG.frete);atualiza();},1400);
+});
 atualiza();
 new IntersectionObserver(e=>{$('stk').style.visibility=e[0].isIntersecting?'hidden':'visible'},{threshold:.1}).observe($('checkout'));
 </script>
