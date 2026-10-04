@@ -121,8 +121,16 @@ footer ul{list-style:none;padding:0;display:grid;gap:8px}
 @keyframes pisca{50%{opacity:.4}}
 @media(prefers-reduced-motion:reduce){#freteVal.calc{animation:none}}
 </style>
-<!-- RASTREAMENTO: cole aqui os scripts do Meta Pixel e do Google Analytics quando tiver os IDs reais.
-     Exemplo: Meta Pixel -> fbq('init','SEU_PIXEL_ID');  GA4 -> gtag('config','SEU_GA_ID'); -->
+<!-- Meta Pixel (o PageView é disparado mais abaixo, pela função track) -->
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1656186649564559');
+</script>
+<!-- Google Analytics: cole aqui o script do GA4 quando tiver o ID real. -->
 </head>
 <body>
 <div id="loja"><div class="stk" id="stk"><span><b>R$ 15,50</b> Limpalar</span><a class="btn amar" href="#checkout">COMPRAR AGORA</a></div>
